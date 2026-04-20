@@ -53,7 +53,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 ## Project Structure
-
+```bash
 template-blockchain-dashboard/
 |-- README.md
 |-- requirements.txt
@@ -66,3 +66,4 @@ template-blockchain-dashboard/
     |-- m2_block_header.py
     |-- m3_difficulty_history.py
     `-- m4_ai_component.py
+```
