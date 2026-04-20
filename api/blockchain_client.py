@@ -35,13 +35,29 @@ def get_difficulty_history(n_points: int = 100) -> list[dict]:
     return data.get("values", [])[-n_points:]
 
 
+def bits_to_target(bits: int) -> int:
+    """Convert compact bits representation to full mining target."""
+    exponent = bits >> 24
+    coefficient = bits & 0xFFFFFF
+    return coefficient * (1 << (8 * (exponent - 3)))
+
+
+def bits_to_difficulty(bits: int) -> float:
+    """Compute Bitcoin difficulty from compact bits."""
+    max_target = 0x00FFFF * (1 << (8 * (0x1D - 3)))
+    current_target = bits_to_target(bits)
+    return max_target / current_target
+
+
 if __name__ == "__main__":
     try:
         latest = get_latest_block()
         block = get_block(latest["hash"])
+        difficulty = bits_to_difficulty(block["bits"])
 
         print("Height:", block["height"])
         print("Hash:", block["hash"])
+        print("Difficulty:", round(difficulty, 2))
         print("Bits (compact target):", block["bits"])
         print("Nonce:", block["nonce"])
         print("Transactions:", block["n_tx"])
