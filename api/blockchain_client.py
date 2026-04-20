@@ -36,16 +36,20 @@ def get_difficulty_history(n_points: int = 100) -> list[dict]:
 
 
 if __name__ == "__main__":
-    latest = get_latest_block()
-    block = get_block(latest["hash"])
+    try:
+        latest = get_latest_block()
+        block = get_block(latest["hash"])
 
-    print("Height:", block["height"])
-    print("Hash:", block["hash"])
-    print("Difficulty:", block.get("difficulty", "Not available in this endpoint"))
-    print("Bits:", block["bits"])
-    print("Nonce:", block["nonce"])
-    print("Transactions:", block["n_tx"])
+        print("Height:", block["height"])
+        print("Hash:", block["hash"])
+        print("Bits (compact target):", block["bits"])
+        print("Nonce:", block["nonce"])
+        print("Transactions:", block["n_tx"])
 
-    # The block hash usually starts with leading zeros because Proof of Work
-    # requires the hash to be below a target threshold.
-    # The bits field is the compact representation of that target.
+        # The block hash starts with leading zeros because Bitcoin uses Proof of Work.
+        # A valid block hash must be lower than a target value.
+        # The bits field stores that target in compact format.
+        # The nonce is changed by miners to search for a valid hash.
+
+    except requests.RequestException as error:
+        print("API request failed:", error)
