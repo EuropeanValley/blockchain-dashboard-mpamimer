@@ -9,10 +9,10 @@ Update this README every week.
 
 | Field | Value |
 |---|---|
-| Student Name | |
-| GitHub Username | |
-| Project Title | |
-| Chosen AI Approach | |
+| Student Name | Marta Pamies Merino |
+| GitHub Username | mpamimer |
+| Project Title | CryptoChain Analyzer Dashboard |
+| Chosen AI Approach | Anomaly detector for abnormal Bitcoin block times |
 
 ## Module Tracking
 
@@ -20,7 +20,7 @@ Use one of these values: `Not started`, `In progress`, `Done`
 
 | Module | What it should include | Status |
 |---|---|---|
-| M1 | Proof of Work Monitor | Not started |
+| M1 | Proof of Work Monitor | In progress |
 | M2 | Block Header Analyzer | Not started |
 | M3 | Difficulty History | Not started |
 | M4 | AI Component | Not started |
@@ -29,32 +29,30 @@ Use one of these values: `Not started`, `In progress`, `Done`
 
 Write 3 to 5 short lines about what you have already done.
 
-- 
-- 
-- 
+- GitHub Classroom repository accepted.
+- Repository structure is available.
+- README updated with project information.
+- Preparing the first API call to get real Bitcoin block data.
 
 ## Next Step
 
 Write the next small step you will do before the next class.
 
-- 
+- Create a Python script that connects to a Bitcoin API and prints the latest block data.
 
 ## Main Problem or Blocker
 
 Write here if you are stuck with something.
 
-- 
+- I am still learning how to use GitHub and connect the repository to my local computer.
 
 ## How to Run
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
-```
 
 ## Project Structure
-
-```text
 template-blockchain-dashboard/
 |-- README.md
 |-- requirements.txt
@@ -67,4 +65,5 @@ template-blockchain-dashboard/
     |-- m2_block_header.py
     |-- m3_difficulty_history.py
     `-- m4_ai_component.py
-```
+
+`Session 1: update README`
