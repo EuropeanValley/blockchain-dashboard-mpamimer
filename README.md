@@ -52,9 +52,7 @@ Write here if you are stuck with something.
 pip install -r requirements.txt
 streamlit run app.py
 
-## Project Structure
 
-```text
 template-blockchain-dashboard/
 |-- README.md
 |-- requirements.txt
