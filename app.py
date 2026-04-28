@@ -4,10 +4,17 @@ import streamlit as st
 
 from api.blockchain_client import (
     bits_to_difficulty,
+    bits_to_target,
+    compute_block_hash_from_header,
+    count_leading_zero_bits,
+    count_leading_zero_hex,
     estimate_hashrate,
     get_block,
+    get_block_header_fields,
     get_block_intervals,
     get_latest_block,
+    is_pow_valid,
+    serialize_block_header,
 )
 
 st.set_page_config(page_title="CryptoChain Analyzer Dashboard", layout="wide")
@@ -29,8 +36,13 @@ def format_hashrate(value: float) -> str:
 try:
     latest = get_latest_block()
     block = get_block(latest["hash"])
+    header = get_block_header_fields(latest["hash"])
     difficulty = bits_to_difficulty(block["bits"])
     hashrate = estimate_hashrate(block["bits"])
+    header_bytes = serialize_block_header(header)
+    computed_hash = compute_block_hash_from_header(header)
+    hash_matches_api = computed_hash == header["hash"]
+    leading_zero_bits = count_leading_zero_bits(header["hash"])
 
     col1, col2, col3, col4 = st.columns(4)
     col5, col6, col7 = st.columns(3)
@@ -90,6 +102,56 @@ try:
     st.write(
         "Bitcoin is expected to produce one block roughly every 600 seconds on average. "
         "This chart helps compare recent block production against that target."
+    )
+    
+    st.markdown("---")
+    st.header("M2 · Block Header Analyzer")
+
+    header = get_block_header_fields(latest["hash"])
+    target = bits_to_target(header["bits"])
+    pow_valid = is_pow_valid(header["hash"], header["bits"])
+    leading_zero_hex = count_leading_zero_hex(header["hash"])
+
+    st.subheader("Header fields")
+
+    hcol1, hcol2 = st.columns(2)
+
+    with hcol1:
+        st.write("**Version:**", header["version"])
+        st.write("**Previous Block Hash:**", header["previousblockhash"])
+        st.write("**Merkle Root:**", header["merkleroot"])
+
+    with hcol2:
+        st.write("**Timestamp:**", header["timestamp"])
+        st.write("**Bits:**", header["bits"])
+        st.write("**Nonce:**", header["nonce"])
+
+    st.subheader("Proof of Work verification")
+
+    vcol1, vcol2 = st.columns(2)
+
+    with vcol1:
+        st.write("**Block Hash (API):**")
+        st.code(header["hash"], language="text")
+
+        st.write("**Computed Double SHA-256 Hash:**")
+        st.code(computed_hash, language="text")
+
+        st.write("**Target (decimal):**")
+        st.code(str(target), language="text")
+
+        st.write("**Serialized Header (80 bytes, hex):**")
+        st.code(header_bytes.hex(), language="text")
+
+    with vcol2:
+        st.metric("Hash matches API", str(hash_matches_api))
+        st.metric("PoW Valid", str(pow_valid))
+        st.metric("Leading zero hex characters", leading_zero_hex)
+        st.metric("Leading zero bits", leading_zero_bits)
+
+    st.write(
+        "A Bitcoin block is valid only if its hash is numerically lower than the "
+        "target encoded by the bits field."
     )
 
 except Exception as error:
