@@ -7,6 +7,7 @@ Provides helper functions to fetch blockchain data from public APIs.
 import requests
 
 BASE_URL = "https://blockchain.info"
+BLOCKSTREAM_URL = "https://blockstream.info/api"
 
 
 def get_latest_block() -> dict:
@@ -48,6 +49,38 @@ def bits_to_difficulty(bits: int) -> float:
     current_target = bits_to_target(bits)
     return max_target / current_target
 
+def get_latest_blocks(n_blocks: int = 20) -> list[dict]:
+    """Return the latest *n_blocks* blocks using Blockstream API."""
+    blocks = []
+    response = requests.get(f"{BLOCKSTREAM_URL}/blocks", timeout=10)
+    response.raise_for_status()
+    blocks.extend(response.json())
+
+    while len(blocks) < n_blocks:
+        last_height = blocks[-1]["height"]
+        response = requests.get(f"{BLOCKSTREAM_URL}/blocks/{last_height}", timeout=10)
+        response.raise_for_status()
+        new_blocks = response.json()
+
+        if not new_blocks:
+            break
+
+        blocks.extend(new_blocks)
+
+    return blocks[:n_blocks]
+
+
+def get_block_intervals(n_blocks: int = 20) -> list[int]:
+    """Return time intervals in seconds between consecutive latest blocks."""
+    blocks = get_latest_blocks(n_blocks)
+    intervals = []
+
+    for i in range(len(blocks) - 1):
+        current_time = blocks[i]["timestamp"]
+        next_time = blocks[i + 1]["timestamp"]
+        intervals.append(current_time - next_time)
+
+    return intervals
 
 if __name__ == "__main__":
     try:
