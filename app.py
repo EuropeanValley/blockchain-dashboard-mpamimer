@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from datetime import datetime
 
 from api.blockchain_client import (
     bits_to_difficulty,
@@ -12,6 +13,7 @@ from api.blockchain_client import (
     get_block,
     get_block_header_fields,
     get_block_intervals,
+    get_difficulty_history_df,
     get_latest_block,
     is_pow_valid,
     serialize_block_header,
@@ -78,6 +80,10 @@ try:
             "Block index": list(range(1, len(intervals) + 1)),
             "Seconds": intervals,
         }
+    )
+
+    interval_df["Anomaly"] = interval_df["Seconds"].apply(
+        lambda x: "Anomalous" if x < 300 or x > 1200 else "Normal"
     )
 
     line_fig = px.line(
@@ -153,6 +159,56 @@ try:
         "A Bitcoin block is valid only if its hash is numerically lower than the "
         "target encoded by the bits field."
     )
+
+    st.markdown("---")
+    st.header("M3 · Difficulty History")
+
+    difficulty_values = get_difficulty_history_df(100)
+
+    difficulty_df = pd.DataFrame(difficulty_values)
+    difficulty_df["Date"] = difficulty_df["x"].apply(
+        lambda ts: datetime.fromtimestamp(ts)
+    )
+    difficulty_df["Difficulty"] = difficulty_df["y"]
+
+    difficulty_fig = px.line(
+        difficulty_df,
+        x="Date",
+        y="Difficulty",
+        title="Bitcoin Difficulty Over Time",
+    )
+    st.plotly_chart(difficulty_fig, use_container_width=True)
+
+    st.write(
+        "This chart shows how Bitcoin mining difficulty changes over time. "
+        "Difficulty adjusts to keep the average block production close to 600 seconds."
+    )
+
+    st.markdown("---")
+    st.header("M4 · AI Component Preview")
+
+    anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"]
+
+    st.write(
+        "Chosen AI approach: anomaly detector for abnormal Bitcoin block times. "
+        "This preview uses a simple heuristic to flag unusually fast or slow blocks. "
+        "A more formal statistical or machine learning model will be added later."
+    )
+
+    st.metric("Detected anomalous intervals", len(anomalous_blocks))
+
+    anomaly_fig = px.scatter(
+        interval_df,
+        x="Block index",
+        y="Seconds",
+        color="Anomaly",
+        title="Preview of Potentially Anomalous Block Times",
+    )
+    anomaly_fig.add_hline(y=600, line_dash="dash", annotation_text="Target: 600s")
+    st.plotly_chart(anomaly_fig, use_container_width=True)
+
+    st.subheader("Potential anomalies detected")
+    st.dataframe(anomalous_blocks, use_container_width=True)
 
 except Exception as error:
     st.error(f"Error while loading blockchain data: {error}")

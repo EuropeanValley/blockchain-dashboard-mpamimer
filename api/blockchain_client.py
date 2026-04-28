@@ -164,6 +164,27 @@ def count_leading_zero_bits(block_hash: str) -> int:
             break
     return count
 
+def get_difficulty_history(n_points: int = 100) -> list[dict]:
+    """Return the last *n_points* difficulty values as a list of dicts."""
+    response = requests.get(
+        "https://api.blockchain.info/charts/difficulty",
+        params={
+            "timespan": "1year",
+            "format": "json",
+            "sampled": "true",
+        },
+        headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"},
+        timeout=15,
+    )
+    response.raise_for_status()
+    data = response.json()
+    return data.get("values", [])[-n_points:]
+
+
+def get_difficulty_history_df(n_points: int = 100) -> list[dict]:
+    """Return difficulty history points."""
+    return get_difficulty_history(n_points)
+
 if __name__ == "__main__":
     try:
         latest = get_latest_block()
