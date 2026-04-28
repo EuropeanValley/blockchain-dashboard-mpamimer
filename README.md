@@ -21,30 +21,31 @@ Use one of these values: `Not started`, `In progress`, `Done`
 | Module | What it should include | Status |
 |---|---|---|
 | M1 | Proof of Work Monitor | In progress |
-| M2 | Block Header Analyzer | Not started |
-| M3 | Difficulty History | Not started |
-| M4 | AI Component | Not started |
+| M2 | Block Header Analyzer | In progress |
+| M3 | Difficulty History | In progress |
+| M4 | AI Component | In progress |
 
 ## Current Progress
 
 Write 3 to 5 short lines about what you have already done.
 
-- GitHub Classroom repository accepted.
-- Repository structure is available.
-- README updated with project information.
-- Preparing the first API call to get real Bitcoin block data.
+- GitHub Classroom repository accepted and initial project structure preserved.
+- Streamlit dashboard created and connected to real Bitcoin blockchain APIs.
+- M1 implemented with live block metrics, estimated hash rate, and block time analysis charts.
+- M2 implemented with block header fields, target calculation, local header serialization, and double SHA-256 verification.
+- M3 started with a difficulty history chart and M4 preview added with anomaly detection on inter-block times.
 
 ## Next Step
 
 Write the next small step you will do before the next class.
 
-- Create a Python script that connects to a Bitcoin API and prints the latest block data.
+- Improve the dashboard layout and refine the anomaly detection approach.
 
 ## Main Problem or Blocker
 
 Write here if you are stuck with something.
 
-- I am still learning how to use GitHub and connect the repository to my local computer.
+- The AI component is still a preview and needs a more formal statistical or machine learning model.
 
 ## How to Run
 
