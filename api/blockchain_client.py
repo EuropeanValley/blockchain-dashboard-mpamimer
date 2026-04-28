@@ -82,6 +82,11 @@ def get_block_intervals(n_blocks: int = 20) -> list[int]:
 
     return intervals
 
+def estimate_hashrate(bits: int) -> float:
+    """Estimate Bitcoin network hashrate in hashes per second."""
+    difficulty = bits_to_difficulty(bits)
+    return difficulty * (2**32) / 600
+
 if __name__ == "__main__":
     try:
         latest = get_latest_block()
