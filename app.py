@@ -16,6 +16,9 @@ from api.blockchain_client import (
     get_block_intervals,
     get_difficulty_history_df,
     get_latest_block,
+    get_mempool_info,
+    get_recommended_fees,
+    get_recent_mempool_txs,
     is_pow_valid,
     serialize_block_header,
 )
@@ -222,6 +225,10 @@ try:
     intervals = get_block_intervals(n_blocks)
     average_interval = sum(intervals) / len(intervals)
 
+    mempool_info = get_mempool_info()
+    fee_info = get_recommended_fees()
+    recent_mempool_txs = get_recent_mempool_txs()
+
     interval_df = pd.DataFrame(
         {
             "Block index": list(range(1, len(intervals) + 1)),
@@ -347,12 +354,13 @@ try:
 
     st.markdown("---")
 
-    tab_m1, tab_m2, tab_m3, tab_m4 = st.tabs(
+    tab_m1, tab_m2, tab_m3, tab_m4, tab_extra = st.tabs(
         [
             "M1 · Proof of Work Monitor",
             "M2 · Block Header Analyzer",
             "M3 · Difficulty History",
             "M4 · AI Component Preview",
+            "Extra · Mempool Overview",
         ]
     )
 
@@ -597,6 +605,59 @@ try:
         '<div class="footer-note">CryptoChain Analyzer Dashboard · Educational use · Bitcoin public API data</div>',
         unsafe_allow_html=True,
     )
+
+    with tab_extra:
+        st.markdown(
+            """
+            <div class="section-card">
+                <div class="section-title">Extra · Mempool Overview</div>
+                <div class="section-subtitle">
+                    Real-time view of pending Bitcoin transactions and current recommended fees.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.write(
+            "This extra section extends the dashboard beyond block headers and difficulty. "
+            "It shows current mempool pressure and fee recommendations for new transactions."
+        )
+
+        e1, e2, e3, e4 = st.columns(4)
+        e1.metric("Mempool Transactions", f"{mempool_info['count']:,}")
+        e2.metric("Mempool Size", f"{mempool_info['vsize']:,} vB")
+        e3.metric("High Priority Fee", f"{fee_info['fastestFee']} sat/vB")
+        e4.metric("Economy Fee", f"{fee_info['economyFee']} sat/vB")
+
+        recent_df = pd.DataFrame(recent_mempool_txs)
+
+        if not recent_df.empty:
+            recent_df["fee_per_vsize"] = recent_df["fee"] / recent_df["vsize"]
+
+            fee_fig = px.histogram(
+                recent_df,
+                x="fee_per_vsize",
+                nbins=20,
+                title="Recent Mempool Transactions: Fee Rate Distribution",
+            )
+            fee_fig.update_layout(
+                plot_bgcolor="white",
+                paper_bgcolor="white",
+                margin=dict(l=20, r=20, t=55, b=20),
+            )
+            st.plotly_chart(fee_fig, width="stretch")
+
+            st.subheader("Recent mempool transactions")
+            st.dataframe(
+                recent_df[["txid", "fee", "vsize", "fee_per_vsize"]].head(10),
+                width="stretch",
+            )
+
+        st.info(
+            "When the mempool becomes more congested, recommended fees tend to increase. "
+            "This helps explain how transaction demand affects inclusion priority."
+        )
 
 except Exception as error:
     st.error(f"Error while loading blockchain data: {error}")

@@ -10,7 +10,7 @@ import struct
 
 BASE_URL = "https://blockchain.info"
 BLOCKSTREAM_URL = "https://blockstream.info/api"
-
+MEMPOOL_URL = "https://mempool.space/api"
 
 def get_latest_block() -> dict:
     """Return the latest block summary."""
@@ -184,6 +184,26 @@ def get_difficulty_history(n_points: int = 100) -> list[dict]:
 def get_difficulty_history_df(n_points: int = 100) -> list[dict]:
     """Return difficulty history points."""
     return get_difficulty_history(n_points)
+
+def get_mempool_info() -> dict:
+    """Return general mempool information."""
+    response = requests.get(f"{MEMPOOL_URL}/mempool", timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_recommended_fees() -> dict:
+    """Return recommended Bitcoin transaction fees."""
+    response = requests.get(f"{MEMPOOL_URL}/v1/fees/recommended", timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
+def get_recent_mempool_txs() -> list[dict]:
+    """Return recent mempool transactions."""
+    response = requests.get(f"{MEMPOOL_URL}/mempool/recent", timeout=10)
+    response.raise_for_status()
+    return response.json()
 
 if __name__ == "__main__":
     try:
