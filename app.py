@@ -257,6 +257,10 @@ try:
         lambda p: "Anomalous" if p < 0.05 else "Normal"
     )
 
+    anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"].copy()
+    fast_anomalies = anomalous_blocks[anomalous_blocks["Seconds"] < mean_interval].copy()
+    slow_anomalies = anomalous_blocks[anomalous_blocks["Seconds"] > mean_interval].copy()
+
     target = bits_to_target(header["bits"])
     pow_valid = is_pow_valid(header["hash"], header["bits"])
     leading_zero_hex = count_leading_zero_hex(header["hash"])
@@ -286,6 +290,7 @@ try:
     adjustment_points = difficulty_df[difficulty_df["Adjustment"] == "Yes"].copy()
 
     anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"]
+    
 
     # OVERVIEW
     st.markdown(
@@ -538,7 +543,7 @@ try:
             <div class="section-card">
                 <div class="section-title">M4 · AI Component Preview</div>
                 <div class="section-subtitle">
-                    Initial anomaly detection preview on inter-block times using a rule-based heuristic.
+                    Statistical anomaly detection on Bitcoin inter-block times using an exponential baseline.
                 </div>
             </div>
             """,
@@ -552,10 +557,12 @@ try:
             "tail probability are flagged as potentially anomalous."
         )
 
-        a1, a2, a3 = st.columns(3)
-        a1.metric("Detected Anomalous Intervals", len(anomalous_blocks))
+        a1, a2, a3, a4, a5 = st.columns(5)
+        a1.metric("Total Anomalies", len(anomalous_blocks))
         a2.metric("Anomaly Rate", f"{(len(anomalous_blocks) / len(interval_df)) * 100:.1f}%")
-        a3.metric("Mean Interval Used", f"{mean_interval:.2f} s")
+        a3.metric("Fast Anomalies", len(fast_anomalies))
+        a4.metric("Slow Anomalies", len(slow_anomalies))
+        a5.metric("Mean Interval Used", f"{mean_interval:.2f} s")
 
         anomaly_fig = px.scatter(
             interval_df,
