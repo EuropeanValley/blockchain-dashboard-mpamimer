@@ -1,3 +1,4 @@
+import math
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -228,8 +229,32 @@ try:
         }
     )
 
-    interval_df["Anomaly"] = interval_df["Seconds"].apply(
-        lambda x: "Anomalous" if x < 300 or x > 1200 else "Normal"
+    interval_df = interval_df[interval_df["Seconds"] > 0].copy()
+    interval_df.reset_index(drop=True, inplace=True)
+    interval_df["Block index"] = range(1, len(interval_df) + 1)
+
+    mean_interval = interval_df["Seconds"].mean()
+
+    def lower_tail_probability(x: float, mean_value: float) -> float:
+        return 1 - math.exp(-x / mean_value)
+
+    def upper_tail_probability(x: float, mean_value: float) -> float:
+        return math.exp(-x / mean_value)
+
+    interval_df["Lower tail p"] = interval_df["Seconds"].apply(
+        lambda x: lower_tail_probability(x, mean_interval)
+    )
+    interval_df["Upper tail p"] = interval_df["Seconds"].apply(
+        lambda x: upper_tail_probability(x, mean_interval)
+    )
+
+    interval_df["Tail probability"] = interval_df.apply(
+        lambda row: min(row["Lower tail p"], row["Upper tail p"]),
+        axis=1,
+    )
+
+    interval_df["Anomaly"] = interval_df["Tail probability"].apply(
+        lambda p: "Anomalous" if p < 0.05 else "Normal"
     )
 
     target = bits_to_target(header["bits"])
@@ -477,13 +502,15 @@ try:
 
         st.write(
             "Chosen AI approach: anomaly detector for abnormal Bitcoin block times. "
-            "This preview flags unusually fast or slow intervals and serves as a first step "
-            "toward a more formal statistical or machine learning model."
+            "Bitcoin inter-block times are expected to follow an exponential baseline. "
+            "In this version, only positive intervals are analyzed, and blocks with very low "
+            "tail probability are flagged as potentially anomalous."
         )
 
-        a1, a2 = st.columns(2)
+        a1, a2, a3 = st.columns(3)
         a1.metric("Detected Anomalous Intervals", len(anomalous_blocks))
         a2.metric("Anomaly Rate", f"{(len(anomalous_blocks) / len(interval_df)) * 100:.1f}%")
+        a3.metric("Mean Interval Used", f"{mean_interval:.2f} s")
 
         anomaly_fig = px.scatter(
             interval_df,
@@ -502,10 +529,16 @@ try:
         st.plotly_chart(anomaly_fig, width="stretch")
 
         st.subheader("Potential anomalies detected")
-        st.dataframe(anomalous_blocks, width="stretch")
+        st.dataframe(
+            anomalous_blocks[
+                ["Block index", "Seconds", "Tail probability", "Anomaly"]
+            ],
+            width="stretch",
+        )
 
         st.caption(
-            "Current preview rule: intervals below 300 seconds or above 1200 seconds are flagged as anomalous."
+            "In this version, anomalies are flagged using an exponential baseline for block times. "
+            "Intervals with very low tail probability are marked as anomalous."
         )
 
     st.markdown(
