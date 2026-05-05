@@ -266,6 +266,25 @@ try:
     difficulty_df["Date"] = difficulty_df["x"].apply(lambda ts: datetime.fromtimestamp(ts))
     difficulty_df["Difficulty"] = difficulty_df["y"]
 
+    difficulty_df["Previous Difficulty"] = difficulty_df["Difficulty"].shift(1)
+    difficulty_df["Change %"] = (
+        (difficulty_df["Difficulty"] / difficulty_df["Previous Difficulty"] - 1) * 100
+    )
+
+    difficulty_df["Difficulty Change"] = (
+        difficulty_df["Difficulty"] - difficulty_df["Previous Difficulty"]
+    )
+
+    difficulty_df["Adjustment"] = difficulty_df["Change %"].apply(
+        lambda x: "Yes" if pd.notna(x) and abs(x) > 0.5 else "No"
+    )
+
+    difficulty_df["Block Time Ratio Approx"] = (
+        difficulty_df["Previous Difficulty"] / difficulty_df["Difficulty"]
+    )
+
+    adjustment_points = difficulty_df[difficulty_df["Adjustment"] == "Yes"].copy()
+
     anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"]
 
     # OVERVIEW
@@ -463,29 +482,55 @@ try:
             unsafe_allow_html=True,
         )
 
-        d1, d2, d3 = st.columns(3)
+        d1, d2, d3, d4 = st.columns(4)
         d1.metric("Current Shown Difficulty", format_difficulty_short(difficulty_df["Difficulty"].iloc[-1]))
         d2.metric("Max in Period", format_difficulty_short(difficulty_df["Difficulty"].max()))
         d3.metric("Min in Period", format_difficulty_short(difficulty_df["Difficulty"].min()))
+        d4.metric("Detected Change Points", len(adjustment_points))
 
         difficulty_fig = px.line(
             difficulty_df,
             x="Date",
             y="Difficulty",
             title="Bitcoin Difficulty Over Time",
-            markers=True,
+            markers=False,
         )
+
+        if not adjustment_points.empty:
+            difficulty_fig.add_scatter(
+                x=adjustment_points["Date"],
+                y=adjustment_points["Difficulty"],
+                mode="markers",
+                name="Detected adjustment",
+                marker=dict(size=9),
+            )
+
         difficulty_fig.update_layout(
             plot_bgcolor="white",
             paper_bgcolor="white",
             margin=dict(l=20, r=20, t=55, b=20),
         )
+
         st.plotly_chart(difficulty_fig, width="stretch")
 
+        st.subheader("Recent detected difficulty changes")
+
+        recent_adjustments = adjustment_points[
+            ["Date", "Difficulty", "Change %", "Block Time Ratio Approx"]
+        ].copy()
+
+        recent_adjustments["Difficulty"] = recent_adjustments["Difficulty"].round(2)
+        recent_adjustments["Change %"] = recent_adjustments["Change %"].round(2)
+        recent_adjustments["Block Time Ratio Approx"] = recent_adjustments[
+            "Block Time Ratio Approx"
+        ].round(3)
+
+        st.dataframe(recent_adjustments.tail(8), width="stretch")
+
         st.info(
-            "Difficulty changes in visible step-like adjustments rather than continuously. "
-            "These adjustments help maintain the long-term average block interval near 600 seconds."
-        )
+            "Only changes above 0.5% are highlighted here as detected difficulty adjustments. "
+            "This avoids marking tiny sampled fluctuations as real adjustment events."
+        )  
 
     with tab_m4:
         st.markdown(
