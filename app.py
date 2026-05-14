@@ -51,23 +51,196 @@ def inject_custom_css():
     st.markdown(
         """
         <style>
+        /* ------------------------------
+           Global app layout
+        ------------------------------ */
         .stApp {
             background: linear-gradient(180deg, #f8fbff 0%, #f3f6fb 100%);
         }
 
+        header[data-testid="stHeader"] {
+            height: 0rem !important;
+            background: transparent !important;
+        }
+
+        div[data-testid="stToolbar"] {
+            display: none !important;
+        }
+
         .block-container {
-            padding-top: 1.4rem;
+            padding-top: 0.4rem !important;
             padding-bottom: 2rem;
             max-width: 1320px;
         }
 
+        /* ------------------------------
+           Sidebar
+        ------------------------------ */
         section[data-testid="stSidebar"] {
-            background: #ffffff;
-            border-right: 1px solid #e9eef6;
+            background: linear-gradient(180deg, #ffffff 0%, #f7faff 55%, #f8efff 100%);
+            border-right: 1px solid #e5eaf5;
+            box-shadow: 4px 0 18px rgba(18, 38, 63, 0.05);
         }
 
+        section[data-testid="stSidebar"] > div {
+            padding-top: 1rem;
+        }
+
+        section[data-testid="stSidebar"] h1 {
+            color: #0f1f3d;
+            font-weight: 850;
+            font-size: 1.6rem;
+            letter-spacing: -0.02em;
+        }
+
+        section[data-testid="stSidebar"] h2,
+        section[data-testid="stSidebar"] h3 {
+            color: #163153;
+            font-weight: 800;
+        }
+
+        section[data-testid="stSidebar"] p,
+        section[data-testid="stSidebar"] li,
+        section[data-testid="stSidebar"] label {
+            color: #4d607d;
+        }
+
+        section[data-testid="stSidebar"] hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #d9e3f2, transparent);
+            margin: 1.1rem 0;
+        }
+
+        section[data-testid="stSidebar"] .stSlider {
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid #e8eef7;
+            border-radius: 18px;
+            padding: 0.85rem 0.95rem 0.55rem 0.95rem;
+            margin-bottom: 0.9rem;
+            box-shadow: 0 5px 16px rgba(18, 38, 63, 0.045);
+        }
+
+        section[data-testid="stSidebar"] div[data-testid="stAlert"] {
+            border-radius: 18px;
+            border: 1px solid #d8f3df;
+            box-shadow: 0 5px 16px rgba(18, 38, 63, 0.045);
+        }
+
+        section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] ul {
+            background: rgba(255, 255, 255, 0.60);
+            border: 1px solid #e8eef7;
+            border-radius: 16px;
+            padding: 0.85rem 1rem 0.85rem 1.35rem;
+            box-shadow: 0 4px 14px rgba(18, 38, 63, 0.035);
+        }
+
+        /* ------------------------------
+        Sidebar slider color: blue
+        ------------------------------ */
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div {
+            color: #3b82f6 !important;
+        }
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[style*="background: linear-gradient"],
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[style*="background-color"] {
+            background: #3b82f6 !important;
+            background-color: #3b82f6 !important;
+        }
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] > div > div {
+            background: #dbeafe !important;
+        }
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"] {
+            background-color: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18) !important;
+        }
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:hover,
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:focus,
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:active {
+            background-color: #2563eb !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.20) !important;
+        }
+
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] span {
+            color: #334155 !important;
+            background: transparent !important;
+        }
+
+        section[data-testid="stSidebar"] .stSlider p {
+            color: #334155 !important;
+        }
+
+        
+        /* ------------------------------
+           Optional custom sidebar cards
+        ------------------------------ */
+        .sidebar-title-card {
+            background: linear-gradient(135deg, #eef5ff 0%, #f7edff 100%);
+            border: 1px solid #e0e8ff;
+            border-radius: 20px;
+            padding: 1rem 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 6px 18px rgba(18, 38, 63, 0.055);
+        }
+
+        .sidebar-title-main {
+            font-size: 1.25rem;
+            font-weight: 850;
+            color: #0f1f3d;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-title-sub {
+            font-size: 0.82rem;
+            color: #5a6f91;
+            line-height: 1.35;
+        }
+
+        .sidebar-pill {
+            display: inline-block;
+            margin-top: 0.55rem;
+            background: #ffffff;
+            color: #2457d6;
+            border: 1px solid #dbeafe;
+            padding: 0.28rem 0.58rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 750;
+        }
+
+        .sidebar-section-card {
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid #e8eef7;
+            border-radius: 18px;
+            padding: 0.9rem 0.95rem;
+            margin: 0.85rem 0;
+            box-shadow: 0 4px 14px rgba(18, 38, 63, 0.035);
+        }
+
+        .sidebar-section-title {
+            font-size: 0.93rem;
+            font-weight: 850;
+            color: #163153;
+            margin-bottom: 0.45rem;
+        }
+
+        .sidebar-small {
+            font-size: 0.82rem;
+            color: #637894;
+            line-height: 1.4;
+        }
+
+        /* ------------------------------
+           Hero
+        ------------------------------ */
         .hero {
-            background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #eef5ff 55%, #f8efff 100%);
             border: 1px solid #e6eef8;
             border-radius: 22px;
             padding: 1.6rem 1.8rem;
@@ -78,7 +251,7 @@ def inject_custom_css():
         .hero-title {
             font-size: 2.4rem;
             font-weight: 800;
-            color: #14213d;
+            color: #0f1f3d;
             margin-bottom: 0.25rem;
         }
 
@@ -91,15 +264,18 @@ def inject_custom_css():
         .hero-tag {
             display: inline-block;
             margin-top: 0.7rem;
-            background: #eef5ff;
-            color: #2563eb;
+            background: linear-gradient(135deg, #eef5ff 0%, #f4ecff 100%);
+            color: #2457d6;
             border: 1px solid #dbeafe;
             padding: 0.35rem 0.7rem;
             border-radius: 999px;
             font-size: 0.88rem;
-            font-weight: 600;
+            font-weight: 700;
         }
 
+        /* ------------------------------
+           Cards and sections
+        ------------------------------ */
         .section-card {
             background: #ffffff;
             border: 1px solid #e8eef7;
@@ -161,6 +337,46 @@ def inject_custom_css():
             margin-top: 1.2rem;
             margin-bottom: 0.5rem;
         }
+
+        /* FINAL OVERRIDE - force sliders to purple */
+
+        /* Slider active track: overrides Streamlit red/orange inline style */
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[style*="rgb(255, 75, 75)"],
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[style*="#ff4b4b"],
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[style*="background"] {
+            background: #8b5cf6 !important;
+            background-color: #8b5cf6 !important;
+        }
+
+        /* Slider inactive rail */
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] > div > div:first-child {
+            background: #e9d5ff !important;
+        }
+
+        /* Slider thumb */
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"] {
+            background: #8b5cf6 !important;
+            background-color: #8b5cf6 !important;
+            border-color: #8b5cf6 !important;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.22) !important;
+        }
+
+        /* Hover/focus thumb */
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:hover,
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:focus,
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] div[role="slider"]:active {
+            background: #7c3aed !important;
+            background-color: #7c3aed !important;
+            border-color: #7c3aed !important;
+            box-shadow: 0 0 0 5px rgba(124, 58, 237, 0.25) !important;
+        }
+
+        /* Slider labels */
+        section[data-testid="stSidebar"] div[data-baseweb="slider"] span,
+        section[data-testid="stSidebar"] .stSlider p {
+            color: #334155 !important;
+            background: transparent !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -213,7 +429,7 @@ st.sidebar.markdown(
 - M1 · Proof of Work Monitor  
 - M2 · Block Header Analyzer  
 - M3 · Difficulty History  
-- M4 · AI Component Preview
+- M4 · AI Anomaly Detection
 """
 )
 
@@ -226,7 +442,7 @@ st.markdown(
         <div class="hero-title">CryptoChain Analyzer Dashboard</div>
         <div class="hero-subtitle">
             Cryptography project dashboard focused on Bitcoin Proof of Work, block timing,
-            difficulty evolution, and a first anomaly detection preview using real blockchain data.
+            difficulty evolution, and AI-based anomaly detection using real blockchain data.
         </div>
         <div class="hero-tag">Hash Functions and Blockchain · Universidad Alfonso X el Sabio</div>
     </div>
@@ -345,7 +561,7 @@ try:
     )
 
     st.caption(
-        "Interactive dashboard with live Bitcoin data, Proof of Work analysis, difficulty history, and anomaly detection preview."
+        "Interactive dashboard with live Bitcoin data, Proof of Work verification, difficulty history, and AI anomaly detection."
     )
 
     o1, o2, o3, o4 = st.columns(4)
