@@ -26,17 +26,6 @@ def get_block(block_hash: str) -> dict:
     return response.json()
 
 
-def get_difficulty_history(n_points: int = 100) -> list[dict]:
-    """Return the last *n_points* difficulty values as a list of dicts."""
-    response = requests.get(
-        f"{BASE_URL}/charts/difficulty",
-        params={"timespan": "1year", "format": "json", "sampled": "true"},
-        timeout=10,
-    )
-    response.raise_for_status()
-    data = response.json()
-    return data.get("values", [])[-n_points:]
-
 
 def bits_to_target(bits: int) -> int:
     """Convert compact bits representation to full mining target."""
@@ -44,6 +33,9 @@ def bits_to_target(bits: int) -> int:
     coefficient = bits & 0xFFFFFF
     return coefficient * (1 << (8 * (exponent - 3)))
 
+def bits_to_hex(bits: int) -> str:
+    """Return bits field as 8-character hexadecimal string."""
+    return f"{bits:08x}"
 
 def bits_to_difficulty(bits: int) -> float:
     """Compute Bitcoin difficulty from compact bits."""
@@ -119,10 +111,10 @@ def count_leading_zero_hex(block_hash: str) -> int:
 
 
 def is_pow_valid(block_hash: str, bits: int) -> bool:
-    """Check whether block hash is below the target encoded by bits."""
+    """Check whether block hash is below or equal to the target encoded by bits."""
     target = bits_to_target(bits)
     block_hash_int = int(block_hash, 16)
-    return block_hash_int < target
+    return block_hash_int <= target
 
 def reverse_hex_bytes(hex_string: str) -> bytes:
     """Convert hex string to bytes and reverse byte order."""

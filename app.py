@@ -6,6 +6,7 @@ from datetime import datetime
 
 from api.blockchain_client import (
     bits_to_difficulty,
+    bits_to_hex,
     bits_to_target,
     compute_block_hash_from_header,
     count_leading_zero_bits,
@@ -30,7 +31,22 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+st_autorefresh = None
 
+try:
+    from streamlit_autorefresh import st_autorefresh
+except ImportError:
+    st_autorefresh = None
+
+refresh_seconds = st.sidebar.slider("Auto-refresh interval (seconds)", 30, 120, 60, 10)
+
+if st_autorefresh is not None:
+    st_autorefresh(interval=refresh_seconds * 1000, key="bitcoin_autorefresh")
+else:
+    st.sidebar.warning(
+        "Auto-refresh package not installed. Install streamlit-autorefresh to enable automatic updates."
+    )
+        
 def inject_custom_css():
     st.markdown(
         """
@@ -177,8 +193,16 @@ inject_custom_css()
 
 st.sidebar.title("Navigation")
 st.sidebar.markdown("### Dashboard Controls")
-n_blocks = st.sidebar.slider("Recent blocks for M1 / M4", 10, 50, 20, 5)
+n_blocks = st.sidebar.slider("Recent blocks for M1 / M4", 10, 50, 50, 5)
 history_points = st.sidebar.slider("Difficulty history points", 30, 150, 100, 10)
+
+anomaly_threshold = st.sidebar.slider(
+    "M4 anomaly threshold",
+    0.01,
+    0.10,
+    0.10,
+    0.01,
+)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Visible sections")
@@ -240,7 +264,8 @@ try:
     interval_df.reset_index(drop=True, inplace=True)
     interval_df["Block index"] = range(1, len(interval_df) + 1)
 
-    mean_interval = interval_df["Seconds"].mean()
+    observed_mean_interval = interval_df["Seconds"].mean()
+    expected_mean_interval = 600
 
     def lower_tail_probability(x: float, mean_value: float) -> float:
         return 1 - math.exp(-x / mean_value)
@@ -249,10 +274,10 @@ try:
         return math.exp(-x / mean_value)
 
     interval_df["Lower tail p"] = interval_df["Seconds"].apply(
-        lambda x: lower_tail_probability(x, mean_interval)
+    lambda x: lower_tail_probability(x, expected_mean_interval)
     )
     interval_df["Upper tail p"] = interval_df["Seconds"].apply(
-        lambda x: upper_tail_probability(x, mean_interval)
+        lambda x: upper_tail_probability(x, expected_mean_interval)
     )
 
     interval_df["Tail probability"] = interval_df.apply(
@@ -261,12 +286,17 @@ try:
     )
 
     interval_df["Anomaly"] = interval_df["Tail probability"].apply(
-        lambda p: "Anomalous" if p < 0.05 else "Normal"
+        lambda p: "Anomalous" if p < anomaly_threshold else "Normal"
     )
 
     anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"].copy()
-    fast_anomalies = anomalous_blocks[anomalous_blocks["Seconds"] < mean_interval].copy()
-    slow_anomalies = anomalous_blocks[anomalous_blocks["Seconds"] > mean_interval].copy()
+    fast_anomalies = anomalous_blocks[
+        anomalous_blocks["Seconds"] < expected_mean_interval
+    ].copy()
+
+    slow_anomalies = anomalous_blocks[
+        anomalous_blocks["Seconds"] > expected_mean_interval
+    ].copy()
 
     target = bits_to_target(header["bits"])
     pow_valid = is_pow_valid(header["hash"], header["bits"])
@@ -286,7 +316,7 @@ try:
         difficulty_df["Difficulty"] - difficulty_df["Previous Difficulty"]
     )
 
-    difficulty_df["Adjustment"] = difficulty_df["Change %"].apply(
+    difficulty_df["Significant Variation"] = difficulty_df["Change %"].apply(
         lambda x: "Yes" if pd.notna(x) and abs(x) > 0.5 else "No"
     )
 
@@ -294,7 +324,9 @@ try:
         difficulty_df["Previous Difficulty"] / difficulty_df["Difficulty"]
     )
 
-    adjustment_points = difficulty_df[difficulty_df["Adjustment"] == "Yes"].copy()
+    significant_variations = difficulty_df[
+        difficulty_df["Significant Variation"] == "Yes"
+    ].copy()
 
     anomalous_blocks = interval_df[interval_df["Anomaly"] == "Anomalous"]
     
@@ -322,7 +354,7 @@ try:
     o1.metric("Latest Block Height", block["height"])
     o2.metric("Current Difficulty", format_difficulty_short(difficulty))
     o3.metric("Bits", block["bits"])
-    o4.metric("Estimated Hash Rate", format_hashrate(hashrate))
+    o4.metric("Theoretical Hash Rate Estimate", format_hashrate(hashrate))
     o5.metric("Nonce", block["nonce"])
     o6.metric("Transactions", block["n_tx"])
     o7.metric("Block Size", f"{block['size']:,} B")
@@ -359,7 +391,7 @@ try:
             "M1 · Proof of Work Monitor",
             "M2 · Block Header Analyzer",
             "M3 · Difficulty History",
-            "M4 · AI Component Preview",
+            "M4 · AI Anomaly Detection",
             "Extra · Mempool Overview",
         ]
     )
@@ -381,7 +413,12 @@ try:
         m1a.metric("Average Block Time", f"{average_interval:.2f} s")
         m1b.metric("Target", "600 s")
         m1c.metric("Intervals Below 600 s", int((interval_df["Seconds"] < 600).sum()))
-        m1d.metric("Detected M4 Preview Anomalies", len(anomalous_blocks))
+        m1d.metric("Detected M4 Anomalies", len(anomalous_blocks))
+
+        st.caption(
+            "Hash rate is estimated from difficulty using the expected 600-second block interval. "
+            "It is not a direct measurement of miners' hardware."
+        )
 
         m1_left, m1_right = st.columns([2.2, 1.15])
 
@@ -439,7 +476,7 @@ try:
         hf1, hf2, hf3, hf4, hf5, hf6 = st.columns(6)
         hf1.metric("Version", header["version"])
         hf2.metric("Timestamp", header["timestamp"])
-        hf3.metric("Bits", header["bits"])
+        hf3.metric("Bits", f"{header['bits']} / 0x{bits_to_hex(header['bits'])}")
         hf4.metric("Nonce", header["nonce"])
         hf5.metric("Leading Zero Hex", leading_zero_hex)
         hf6.metric("Leading Zero Bits", leading_zero_bits)
@@ -488,7 +525,7 @@ try:
             <div class="section-card">
                 <div class="section-title">M3 · Difficulty History</div>
                 <div class="section-subtitle">
-                    Historical evolution of Bitcoin mining difficulty across recent sampled periods.
+                    Historical evolution of Bitcoin mining difficulty using public API sampled data.
                 </div>
             </div>
             """,
@@ -499,7 +536,7 @@ try:
         d1.metric("Current Shown Difficulty", format_difficulty_short(difficulty_df["Difficulty"].iloc[-1]))
         d2.metric("Max in Period", format_difficulty_short(difficulty_df["Difficulty"].max()))
         d3.metric("Min in Period", format_difficulty_short(difficulty_df["Difficulty"].min()))
-        d4.metric("Detected Change Points", len(adjustment_points))
+        d4.metric("Significant Variations", len(significant_variations))
 
         difficulty_fig = px.line(
             difficulty_df,
@@ -509,12 +546,12 @@ try:
             markers=False,
         )
 
-        if not adjustment_points.empty:
+        if not significant_variations.empty:
             difficulty_fig.add_scatter(
-                x=adjustment_points["Date"],
-                y=adjustment_points["Difficulty"],
+                x=significant_variations["Date"],
+                y=significant_variations["Difficulty"],
                 mode="markers",
-                name="Detected adjustment",
+                name="Significant Variation",
                 marker=dict(size=9),
             )
 
@@ -526,9 +563,9 @@ try:
 
         st.plotly_chart(difficulty_fig, width="stretch")
 
-        st.subheader("Recent detected difficulty changes")
+        st.subheader("Recent significant difficulty variations")
 
-        recent_adjustments = adjustment_points[
+        recent_adjustments = significant_variations[
             ["Date", "Difficulty", "Change %", "Block Time Ratio Approx"]
         ].copy()
 
@@ -541,15 +578,15 @@ try:
         st.dataframe(recent_adjustments.tail(8), width="stretch")
 
         st.info(
-            "Only changes above 0.5% are highlighted here as detected difficulty adjustments. "
-            "This avoids marking tiny sampled fluctuations as real adjustment events."
-        )  
+            "The chart uses sampled public API difficulty data. Points above 0.5% change are highlighted "
+            "as significant visible variations, not as a full reconstruction of every 2016-block adjustment boundary."
+        )
 
     with tab_m4:
         st.markdown(
             """
             <div class="section-card">
-                <div class="section-title">M4 · AI Component Preview</div>
+                <div class="section-title">M4 · AI Anomaly Detection</div>
                 <div class="section-subtitle">
                     Statistical anomaly detection on Bitcoin inter-block times using an exponential baseline.
                 </div>
@@ -560,24 +597,52 @@ try:
 
         st.write(
             "Chosen AI approach: anomaly detector for abnormal Bitcoin block times. "
-            "Bitcoin inter-block times are expected to follow an exponential baseline. "
-            "In this version, only positive intervals are analyzed, and blocks with very low "
-            "tail probability are flagged as potentially anomalous."
+            "Bitcoin mining can be modelled as a probabilistic process, where inter-block "
+            "times are expected to follow an exponential baseline with an average target "
+            "of 600 seconds. The model analyses positive block intervals and flags as "
+            "potentially anomalous those with very low tail probability under this baseline."
         )
 
-        a1, a2, a3, a4, a5 = st.columns(5)
+        a1, a2, a3, a4, a5, a6 = st.columns(6)
         a1.metric("Total Anomalies", len(anomalous_blocks))
         a2.metric("Anomaly Rate", f"{(len(anomalous_blocks) / len(interval_df)) * 100:.1f}%")
         a3.metric("Fast Anomalies", len(fast_anomalies))
         a4.metric("Slow Anomalies", len(slow_anomalies))
-        a5.metric("Mean Interval Used", f"{mean_interval:.2f} s")
+        a5.metric("Expected Mean", "600 s")
+        a6.metric("Threshold", f"{anomaly_threshold:.2f}")
+
+        st.caption(
+            f"Observed mean interval in the selected sample: {observed_mean_interval:.2f} seconds."
+        )
+
+        hist_ai_fig = px.histogram(
+            interval_df,
+            x="Seconds",
+            nbins=12,
+            title="Observed Inter-Block Times Compared with Exponential Baseline",
+            histnorm="probability density",
+        )
+
+        hist_ai_fig.add_vline(
+            x=600,
+            line_dash="dash",
+            annotation_text="Expected mean: 600s",
+        )
+
+        hist_ai_fig.update_layout(
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            margin=dict(l=20, r=20, t=55, b=20),
+        )
+
+        st.plotly_chart(hist_ai_fig, width="stretch")
 
         anomaly_fig = px.scatter(
             interval_df,
             x="Block index",
             y="Seconds",
             color="Anomaly",
-            title="Preview of Potentially Anomalous Block Times",
+            title="Detected Anomalous Bitcoin Block Intervals",
             color_discrete_map={"Normal": "#4f8cff", "Anomalous": "#9b6dff"},
         )
         anomaly_fig.add_hline(y=600, line_dash="dash", annotation_text="Target: 600s")
@@ -589,74 +654,83 @@ try:
         st.plotly_chart(anomaly_fig, width="stretch")
 
         st.subheader("Potential anomalies detected")
-        st.dataframe(
-            anomalous_blocks[
-                ["Block index", "Seconds", "Tail probability", "Anomaly"]
-            ],
-            width="stretch",
-        )
 
-        st.caption(
-            "In this version, anomalies are flagged using an exponential baseline for block times. "
-            "Intervals with very low tail probability are marked as anomalous."
-        )
-
-    st.markdown(
-        '<div class="footer-note">CryptoChain Analyzer Dashboard · Educational use · Bitcoin public API data</div>',
-        unsafe_allow_html=True,
-    )
-
-    with tab_extra:
-        st.markdown(
-            """
-            <div class="section-card">
-                <div class="section-title">Extra · Mempool Overview</div>
-                <div class="section-subtitle">
-                    Real-time view of pending Bitcoin transactions and current recommended fees.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.write(
-            "This extra section extends the dashboard beyond block headers and difficulty. "
-            "It shows current mempool pressure and fee recommendations for new transactions."
-        )
-
-        e1, e2, e3, e4 = st.columns(4)
-        e1.metric("Mempool Transactions", f"{mempool_info['count']:,}")
-        e2.metric("Mempool Size", f"{mempool_info['vsize']:,} vB")
-        e3.metric("High Priority Fee", f"{fee_info['fastestFee']} sat/vB")
-        e4.metric("Economy Fee", f"{fee_info['economyFee']} sat/vB")
-
-        recent_df = pd.DataFrame(recent_mempool_txs)
-
-        if not recent_df.empty:
-            recent_df["fee_per_vsize"] = recent_df["fee"] / recent_df["vsize"]
-
-            fee_fig = px.histogram(
-                recent_df,
-                x="fee_per_vsize",
-                nbins=20,
-                title="Recent Mempool Transactions: Fee Rate Distribution",
+        if anomalous_blocks.empty:
+            st.info(
+                "No anomalous intervals were detected with the current threshold. "
+                "This is possible because Bitcoin block discovery is random, and the selected sample "
+                "may not contain extremely short or extremely long intervals."
             )
-            fee_fig.update_layout(
-                plot_bgcolor="white",
-                paper_bgcolor="white",
-                margin=dict(l=20, r=20, t=55, b=20),
-            )
-            st.plotly_chart(fee_fig, width="stretch")
-
-            st.subheader("Recent mempool transactions")
+        else:
             st.dataframe(
-                recent_df[["txid", "fee", "vsize", "fee_per_vsize"]].head(10),
+                anomalous_blocks[
+                    ["Block index", "Seconds", "Tail probability", "Anomaly"]
+                ],
                 width="stretch",
             )
 
-        st.info(
-            "When the mempool becomes more congested, recommended fees tend to increase. "
-            "This helps explain how transaction demand affects inclusion priority."
+        st.caption(
+            f"Anomalies are flagged using an exponential baseline with expected mean 600 seconds. "
+            f"Very short or very long intervals receive low tail probability. "
+            f"The current anomaly threshold is {anomaly_threshold:.2f}."
+        )
+
+        with tab_extra:
+            st.markdown(
+                """
+                <div class="section-card">
+                    <div class="section-title">Extra · Mempool Overview</div>
+                    <div class="section-subtitle">
+                        Real-time view of pending Bitcoin transactions and current recommended fees.
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            st.write(
+                "This extra section extends the dashboard beyond block headers and difficulty. "
+                "It shows current mempool pressure and fee recommendations for new transactions."
+            )
+
+            e1, e2, e3, e4 = st.columns(4)
+            e1.metric("Mempool Transactions", f"{mempool_info['count']:,}")
+            e2.metric("Mempool Size", f"{mempool_info['vsize']:,} vB")
+            e3.metric("High Priority Fee", f"{fee_info['fastestFee']} sat/vB")
+            e4.metric("Economy Fee", f"{fee_info['economyFee']} sat/vB")
+
+            recent_df = pd.DataFrame(recent_mempool_txs)
+
+            if not recent_df.empty:
+                recent_df["fee_per_vsize"] = recent_df["fee"] / recent_df["vsize"]
+
+                fee_fig = px.histogram(
+                    recent_df,
+                    x="fee_per_vsize",
+                    nbins=20,
+                    title="Recent Mempool Transactions: Fee Rate Distribution",
+                )
+                fee_fig.update_layout(
+                    plot_bgcolor="white",
+                    paper_bgcolor="white",
+                    margin=dict(l=20, r=20, t=55, b=20),
+                )
+                st.plotly_chart(fee_fig, width="stretch")
+
+                st.subheader("Recent mempool transactions")
+                st.dataframe(
+                    recent_df[["txid", "fee", "vsize", "fee_per_vsize"]].head(10),
+                    width="stretch",
+                )
+
+            st.info(
+                "When the mempool becomes more congested, recommended fees tend to increase. "
+                "This helps explain how transaction demand affects inclusion priority."
+            )
+
+        st.markdown(
+            '<div class="footer-note">CryptoChain Analyzer Dashboard · Educational use · Bitcoin public API data</div>',
+            unsafe_allow_html=True,
         )
 
 except Exception as error:
